@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Task Manager</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <h1>Task Manager</h1>
+
+  <form id="task-form">
+    <input type="text" id="title" placeholder="Title" required>
+    <input type="text" id="description" placeholder="Description" required>
+    <select id="status">
+      <option value="Pending">Pending</option>
+      <option value="Done">Done</option>
+    </select>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <hr>
+
+  <h2>All Tasks</h2>
+  <div id="task-list"></div>
+
+  <script>
+    // Fetch and display tasks
+    function fetchTasks() {
+      fetch('/tasks')
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById('task-list');
+          container.innerHTML = '';
+          data.forEach(task => {
+            const taskDiv = document.createElement('div');
+            taskDiv.innerHTML = `
+              <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ccc;">
+                <strong>${task.title}</strong> - ${task.status}<br>
+                <em>${task.description}</em><br>
+                <button onclick="toggleStatus(${task.id}, '${task.status}')">
+                  Mark as ${task.status === 'Pending' ? 'Done' : 'Pending'}
+                </button>
+                <button onclick="deleteTask(${task.id})" style="margin-left: 10px; color: red;">
+                  Delete
+                </button>
+              </div>
+            `;
+            container.appendChild(taskDiv);
+          });
+        });
+    }
+
+    // Toggle task status
+    function toggleStatus(taskId, currentStatus) {
+  const taskDiv = event.target.closest("div"); // parent container of task
+
+  const title = taskDiv.querySelector("strong").innerText;
+  const description = taskDiv.querySelector("em").innerText;
+  const newStatus = currentStatus === 'Pending' ? 'Done' : 'Pending';
+
+  fetch(`/tasks/${taskId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ title, description, status: newStatus })
+  })
+  .then(res => res.json())
+  .then(() => fetchTasks());
+}
+
+
+    // Delete task
+    function deleteTask(taskId) {
+      
+        fetch(`/tasks/${taskId}`, {
+          method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(() => fetchTasks());
+      }
+  
+
+    // Handle form submission
+    document.getElementById('task-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const description = document.getElementById('description').value;
+      const status = document.getElementById('status').value;
+
+      fetch('/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, status })
+      })
+      .then(res => res.json())
+      .then(() => {
+        document.getElementById('task-form').reset();
+        fetchTasks();
+      });
+    });
+
+    fetchTasks(); // Initial load
+  </script>
+</body>
+</html>
